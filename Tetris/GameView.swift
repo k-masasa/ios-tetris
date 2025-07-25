@@ -147,8 +147,8 @@ struct MainGameView: View {
                 .gesture(
                     DragGesture()
                         .onEnded { value in
-                            let horizontalAmount = value.translation.x
-                            let verticalAmount = value.translation.y
+                            let horizontalAmount = value.translation.width
+                            let verticalAmount = value.translation.height
                             
                             if abs(horizontalAmount) > abs(verticalAmount) {
                                 // Horizontal swipe
