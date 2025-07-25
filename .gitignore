@@ -1,3 +1,27 @@
+# Xcode
 *.xcuserstate
 *.xcuserdatad/
 DerivedData/
+Build/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# iOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+Packages/
+Package.pins
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
