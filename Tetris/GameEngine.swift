@@ -16,6 +16,7 @@ class GameEngine: ObservableObject {
     @Published var level = 1
     @Published var lines = 0
     @Published var gameState = GameState.menu
+    @Published var showLineClearAnimation = false
     
     private var gameTimer: Timer?
     private var dropInterval: TimeInterval = 1.0
@@ -32,13 +33,17 @@ class GameEngine: ObservableObject {
     }
     
     func pauseGame() {
-        gameState = .paused
-        stopGameTimer()
+        if gameState == .playing {
+            gameState = .paused
+            stopGameTimer()
+        }
     }
     
     func resumeGame() {
-        gameState = .playing
-        startGameTimer()
+        if gameState == .paused {
+            gameState = .playing
+            startGameTimer()
+        }
     }
     
     func resetGame() {
@@ -48,13 +53,16 @@ class GameEngine: ObservableObject {
         score = 0
         level = 1
         lines = 0
+        showLineClearAnimation = false
         stopGameTimer()
     }
     
     private func startGameTimer() {
         stopGameTimer()
         gameTimer = Timer.scheduledTimer(withTimeInterval: dropInterval, repeats: true) { _ in
-            self.dropTetromino()
+            DispatchQueue.main.async {
+                self.dropTetromino()
+            }
         }
     }
     
@@ -89,6 +97,15 @@ class GameEngine: ObservableObject {
             // Tetromino has landed
             board.place(tetromino: tetromino)
             let linesCleared = board.clearFullLines()
+            
+            if linesCleared > 0 {
+                // Show line clear animation
+                showLineClearAnimation = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self.showLineClearAnimation = false
+                }
+            }
+            
             updateScore(linesCleared: linesCleared)
             
             if board.isGameOver() {
@@ -123,10 +140,15 @@ class GameEngine: ObservableObject {
         guard gameState == .playing, let tetromino = currentTetromino else { return }
         
         var droppedTetromino = tetromino
+        var dropDistance = 0
         
         while board.isValidPosition(for: droppedTetromino.moved(dx: 0, dy: 1)) {
             droppedTetromino = droppedTetromino.moved(dx: 0, dy: 1)
+            dropDistance += 1
         }
+        
+        // Add bonus points for hard drop
+        score += dropDistance * 2
         
         currentTetromino = droppedTetromino
         dropTetromino() // This will place the piece immediately

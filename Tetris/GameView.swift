@@ -62,7 +62,7 @@ struct MenuView: View {
 }
 
 struct InstructionsView: View {
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         NavigationView {
@@ -85,15 +85,20 @@ struct InstructionsView: View {
                     Text("• 2 lines: 100 × level")
                     Text("• 3 lines: 300 × level")
                     Text("• 4 lines: 1200 × level")
+                    Text("• Hard drop: 2 points per cell")
                 }
                 
                 Spacer()
             }
             .padding()
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: Button("Done") {
-                presentationMode.wrappedValue.dismiss()
-            })
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }
@@ -195,6 +200,27 @@ struct TetrisBoard: View {
                     .fill(Color.black.opacity(0.8))
                     .border(Color.white, width: 2)
                 
+                // Grid lines
+                ForEach(0..<GameBoard.height, id: \.self) { row in
+                    Rectangle()
+                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                        .frame(width: geometry.size.width, height: blockSize)
+                        .position(
+                            x: geometry.size.width / 2,
+                            y: CGFloat(row) * blockSize + blockSize / 2
+                        )
+                }
+                
+                ForEach(0..<GameBoard.width, id: \.self) { col in
+                    Rectangle()
+                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                        .frame(width: blockSize, height: geometry.size.height)
+                        .position(
+                            x: CGFloat(col) * blockSize + blockSize / 2,
+                            y: geometry.size.height / 2
+                        )
+                }
+                
                 // Placed blocks
                 ForEach(0..<GameBoard.height, id: \.self) { row in
                     ForEach(0..<GameBoard.width, id: \.self) { col in
@@ -207,6 +233,8 @@ struct TetrisBoard: View {
                                     x: CGFloat(col) * blockSize + blockSize / 2,
                                     y: CGFloat(row) * blockSize + blockSize / 2
                                 )
+                                .scaleEffect(gameEngine.showLineClearAnimation ? 1.1 : 1.0)
+                                .animation(.easeInOut(duration: 0.3), value: gameEngine.showLineClearAnimation)
                         }
                     }
                 }
@@ -222,6 +250,21 @@ struct TetrisBoard: View {
                                 x: CGFloat(position.0) * blockSize + blockSize / 2,
                                 y: CGFloat(position.1) * blockSize + blockSize / 2
                             )
+                            .shadow(color: tetromino.color.opacity(0.6), radius: 2)
+                    }
+                }
+                
+                // Ghost piece (preview of where piece will land)
+                if let tetromino = gameEngine.currentTetromino {
+                    let ghostTetromino = getGhostPiece(for: tetromino)
+                    ForEach(Array(ghostTetromino.getBlockPositions().enumerated()), id: \.offset) { index, position in
+                        Rectangle()
+                            .stroke(tetromino.color.opacity(0.3), lineWidth: 2)
+                            .frame(width: blockSize, height: blockSize)
+                            .position(
+                                x: CGFloat(position.0) * blockSize + blockSize / 2,
+                                y: CGFloat(position.1) * blockSize + blockSize / 2
+                            )
                     }
                 }
             }
@@ -230,6 +273,16 @@ struct TetrisBoard: View {
             CGFloat(GameBoard.width) / CGFloat(GameBoard.height),
             contentMode: .fit
         )
+    }
+    
+    private func getGhostPiece(for tetromino: Tetromino) -> Tetromino {
+        var ghostTetromino = tetromino
+        
+        while gameEngine.board.isValidPosition(for: ghostTetromino.moved(dx: 0, dy: 1)) {
+            ghostTetromino = ghostTetromino.moved(dx: 0, dy: 1)
+        }
+        
+        return ghostTetromino
     }
 }
 
@@ -282,53 +335,38 @@ struct GameControls: View {
             .background(Color.orange)
             .cornerRadius(10)
             
-            // Movement controls
-            HStack(spacing: 30) {
-                Button("⬅️") {
-                    gameEngine.moveTetromino(dx: -1)
-                }
-                .font(.title)
-                .padding()
-                .background(Color.blue.opacity(0.7))
-                .cornerRadius(10)
-                
-                Button("🔄") {
-                    gameEngine.rotateTetromino()
-                }
-                .font(.title)
-                .padding()
-                .background(Color.green.opacity(0.7))
-                .cornerRadius(10)
-                
-                Button("➡️") {
-                    gameEngine.moveTetromino(dx: 1)
-                }
-                .font(.title)
-                .padding()
-                .background(Color.blue.opacity(0.7))
-                .cornerRadius(10)
-            }
+            Text("Gesture Controls:")
+                .foregroundColor(.white)
+                .font(.headline)
             
-            // Drop controls
-            HStack(spacing: 30) {
-                Button("⬇️ Soft") {
-                    gameEngine.moveTetromino(dx: 0, dy: 1)
+            HStack(spacing: 15) {
+                VStack {
+                    Text("⬅️➡️")
+                        .font(.title2)
+                    Text("Swipe to Move")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding()
-                .background(Color.yellow.opacity(0.7))
-                .cornerRadius(10)
                 
-                Button("⬇️ Hard") {
-                    gameEngine.hardDrop()
+                VStack {
+                    Text("👆")
+                        .font(.title2)
+                    Text("Tap to Rotate")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding()
-                .background(Color.red.opacity(0.7))
-                .cornerRadius(10)
+                
+                VStack {
+                    Text("⬇️")
+                        .font(.title2)
+                    Text("Swipe Down to Drop")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
             }
+            .padding()
+            .background(Color.black.opacity(0.3))
+            .cornerRadius(10)
         }
         .padding()
     }
