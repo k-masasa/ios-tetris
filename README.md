@@ -1,3 +1,7 @@
+# 概要
+
+GitHub Copilot のみで実装。いわゆるバイブコーディング。☕️
+
 # iOS Tetris
 
 A complete Tetris game implementation for iOS using Swift and SwiftUI.
